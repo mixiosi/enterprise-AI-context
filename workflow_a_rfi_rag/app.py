@@ -32,9 +32,14 @@ Context:
 {context}
 """
 
-@st.cache_resource(show_spinner="Loading Enterprise Embedding Model (Local)...")
+@st.cache_resource(show_spinner="Loading Enterprise Embedding Model (Local CPU)...")
 def get_embeddings():
-    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    # Force CPU to prevent PyTorch from hanging on CUDA initialization in a background thread
+    return HuggingFaceEmbeddings(
+        model_name="all-MiniLM-L6-v2",
+        model_kwargs={'device': 'cpu'},
+        encode_kwargs={'normalize_embeddings': False}
+    )
 
 with st.sidebar:
     st.header("📂 Ingestion Layer (The Lower Floors)")
