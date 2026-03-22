@@ -11,6 +11,8 @@ from langchain_classic.chains.combine_documents import create_stuff_documents_ch
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 load_dotenv()
 
 st.set_page_config(page_title="RFI Context Engine", page_icon="🏗️")
@@ -29,6 +31,10 @@ Use the retrieved context to answer the question. If you don't know, say you don
 Context:
 {context}
 """
+
+@st.cache_resource(show_spinner="Loading Enterprise Embedding Model (Local)...")
+def get_embeddings():
+    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 with st.sidebar:
     st.header("📂 Ingestion Layer (The Lower Floors)")
@@ -54,8 +60,7 @@ if uploaded_file and st.session_state.rfi_db is None:
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         splits = text_splitter.split_documents(docs)
         
-        # Use a local open-source embedding model so we don't need an OpenAI key
-        embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        embeddings = get_embeddings()
         st.session_state.rfi_db = Chroma.from_documents(documents=splits, embedding=embeddings)
         st.sidebar.success("✅ Context Loaded into Local ChromaDB!")
 
