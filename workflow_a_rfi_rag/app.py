@@ -1,6 +1,5 @@
 import os
 import streamlit as st
-import tempfile
 import traceback
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -34,16 +33,22 @@ Context:
 
 @st.cache_resource(show_spinner="Loading Enterprise Embedding Model (Local CPU)...")
 def get_embeddings():
-    # Force CPU to prevent PyTorch from hanging on CUDA initialization in a background thread
     return HuggingFaceEmbeddings(
         model_name="all-MiniLM-L6-v2",
         model_kwargs={'device': 'cpu'},
         encode_kwargs={'normalize_embeddings': False}
     )
 
+# List available mock documents
+MOCK_DOCS_DIR = os.path.join(os.path.dirname(__file__), "mock_documents")
+available_docs = ["-- Select a document --"]
+if os.path.exists(MOCK_DOCS_DIR):
+    available_docs.extend([f for f in os.listdir(MOCK_DOCS_DIR) if f.endswith(".pdf")])
+
 with st.sidebar:
     st.header("📂 Ingestion Layer (The Lower Floors)")
-    uploaded_file = st.file_uploader("Upload Blueprint / OSHA Spec (PDF)", type="pdf")
+    st.info("Bypassing browser upload limits by reading directly from local secure storage.")
+    selected_doc = st.selectbox("Select Blueprint / OSHA Spec", available_docs)
 
 api_key = os.environ.get("OPENROUTER_API_KEY")
 
@@ -56,16 +61,14 @@ if "rfi_db" not in st.session_state:
 if "last_uploaded" not in st.session_state:
     st.session_state.last_uploaded = None
 
-if uploaded_file:
+if selected_doc != "-- Select a document --":
     # Only process if it's a new file or we don't have a DB yet
-    if st.session_state.rfi_db is None or st.session_state.last_uploaded != uploaded_file.name:
-        with st.spinner("Processing document into Vector Database..."):
+    if st.session_state.rfi_db is None or st.session_state.last_uploaded != selected_doc:
+        with st.spinner(f"Processing {selected_doc} into Vector Database..."):
             try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                    tmp_file.write(uploaded_file.getvalue())
-                    tmp_path = tmp_file.name
+                doc_path = os.path.join(MOCK_DOCS_DIR, selected_doc)
                 
-                loader = PyPDFLoader(tmp_path)
+                loader = PyPDFLoader(doc_path)
                 docs = loader.load()
                 
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
@@ -75,19 +78,19 @@ if uploaded_file:
                 
                 # Create a fresh Chroma DB in memory
                 st.session_state.rfi_db = Chroma.from_documents(documents=splits, embedding=embeddings)
-                st.session_state.last_uploaded = uploaded_file.name
-                st.sidebar.success("✅ Context Loaded into Local ChromaDB!")
+                st.session_state.last_uploaded = selected_doc
+                st.sidebar.success(f"✅ Context Loaded: {selected_doc}")
             except Exception as e:
                 st.sidebar.error(f"Error processing document: {e}")
                 st.sidebar.error(traceback.format_exc())
     else:
-        st.sidebar.success("✅ Context Loaded into Local ChromaDB!")
+        st.sidebar.success(f"✅ Context Loaded: {selected_doc}")
 
 if query := st.chat_input("E.g., What is the required pipe thickness for the secondary cooling loop?"):
     st.chat_message("user").write(query)
     
     if st.session_state.rfi_db is None:
-        st.error("Upload a document first.")
+        st.error("Select a document from the sidebar first.")
     else:
         with st.chat_message("assistant"):
             with st.spinner("Accessing Skyscraper Context..."):
