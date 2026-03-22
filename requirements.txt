@@ -1,0 +1,13 @@
+streamlit
+langchain
+langchain-community
+langchain-openai
+chromadb
+pypdf
+pydantic
+mcp
+faker
+ultralytics
+opencv-python-headless
+pandas
+python-dotenv
