@@ -32,11 +32,12 @@ Context:
 
 with st.sidebar:
     st.header("📂 Ingestion Layer (The Lower Floors)")
-    api_key = st.text_input("OpenRouter API Key", type="password")
     uploaded_file = st.file_uploader("Upload Blueprint / OSHA Spec (PDF)", type="pdf")
 
+api_key = os.environ.get("OPENROUTER_API_KEY")
+
 if not api_key:
-    st.warning("Enter OpenRouter API Key to initialize the RAG pipeline.")
+    st.warning("⚠️ OPENROUTER_API_KEY not found in environment variables. Please add it to your .env file.")
     st.stop()
 
 if "rfi_db" not in st.session_state:

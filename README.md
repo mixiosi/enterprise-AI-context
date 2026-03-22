@@ -46,9 +46,16 @@ We utilize the **Model Context Protocol (MCP)** to enforce "least privilege" acc
     python workflow_c_edge_safety/yolo_monitor.py
     ```
 
-## Installation
+## Installation & Setup
 ```bash
+# 1. Set up the virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
+
+# 2. Install dependencies
 pip install -r requirements.txt
+
+# 3. Configure API Keys
+cp .env.example .env
+# Edit the .env file and add your OPENROUTER_API_KEY
 ```
